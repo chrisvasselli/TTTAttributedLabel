@@ -987,7 +987,7 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
                 }
 
                 CGFloat penOffset = (CGFloat)CTLineGetPenOffsetForFlush(truncatedLine, flushFactor, rect.size.width);
-                CGContextSetTextPosition(c, penOffset, lineOrigin.y - descent - self.font.descender);
+                CGContextSetTextPosition(c, penOffset, lineOrigin.y - descent - self.font.descender + self.ss_textOffsetToStrikethroughUnderline);
 
                 CTLineDraw(truncatedLine, c);
                 
@@ -1004,12 +1004,14 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
                 CFRelease(truncationToken);
             } else {
                 CGFloat penOffset = (CGFloat)CTLineGetPenOffsetForFlush(line, flushFactor, rect.size.width);
-                CGContextSetTextPosition(c, penOffset, lineOrigin.y - descent - self.font.descender);
+                CGContextSetTextPosition(c, penOffset, lineOrigin.y - descent - self.font.descender + self.ss_textOffsetToStrikethroughUnderline);
                 CTLineDraw(line, c);
             }
         } else {
             CGFloat penOffset = (CGFloat)CTLineGetPenOffsetForFlush(line, flushFactor, rect.size.width);
-            CGContextSetTextPosition(c, penOffset, lineOrigin.y - descent - self.font.descender);
+            
+            // looks like I need to conditionally add 2 to this if romaji is not showing, and we're on ios 11. Don't totally understand why, it looks like "descent" is changing.
+            CGContextSetTextPosition(c, penOffset, lineOrigin.y - descent - self.font.descender + self.ss_textOffsetToStrikethroughUnderline);
             CTLineDraw(line, c);
         }
     }

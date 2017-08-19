@@ -200,6 +200,11 @@ IB_DESIGNABLE
  */
 @property (nonatomic, assign) IBInspectable CGFloat kern;
 
+/**
+ * ADDED BY NIHONGO: Need this to fix a bug in iOS 11
+ */
+@property (nonatomic, assign) CGFloat ss_textOffsetToStrikethroughUnderline;
+
 ///--------------------------------------------
 /// @name Acccessing Paragraph Style Attributes
 ///--------------------------------------------
