@@ -1496,7 +1496,7 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
                 if (accessibilityLabel) {
                     UIAccessibilityElement *linkElement = [[UIAccessibilityElement alloc] initWithAccessibilityContainer:self];
                     linkElement.accessibilityTraits = UIAccessibilityTraitLink;
-                    linkElement.accessibilityFrame = [self convertRect:[self boundingRectForCharacterRange:link.result.range] toView:self.window];
+                    linkElement.accessibilityFrameInContainerSpace = [self boundingRectForCharacterRange:link.result.range];
                     linkElement.accessibilityLabel = accessibilityLabel;
 
                     if (![accessibilityLabel isEqualToString:accessibilityValue]) {
@@ -1511,7 +1511,7 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
             baseElement.accessibilityLabel = [super accessibilityLabel];
             baseElement.accessibilityHint = [super accessibilityHint];
             baseElement.accessibilityValue = [super accessibilityValue];
-            baseElement.accessibilityFrame = [self convertRect:self.bounds toView:self.window];
+            baseElement.accessibilityFrameInContainerSpace = self.bounds;
             baseElement.accessibilityTraits = [super accessibilityTraits];
 
             [mutableAccessibilityItems addObject:baseElement];
