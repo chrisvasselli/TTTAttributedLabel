@@ -195,6 +195,11 @@ IB_DESIGNABLE
  */
 @property (nonatomic, assign) IBInspectable CGFloat kern;
 
+/**
+ * ADDED BY NIHONGO: Need this to fix a bug in iOS 11
+ */
+@property (nonatomic, assign) CGFloat ss_textOffsetToStrikethroughUnderline;
+
 ///--------------------------------------------
 /// @name Acccessing Paragraph Style Attributes
 ///--------------------------------------------
@@ -450,8 +455,8 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
  @param url The URL for the selected link.
  */
 - (void)attributedLabel:(TTTAttributedLabel *)label
-   didSelectLinkWithURL:(NSURL *)url;
-
+   didSelectLinkWithURL:(NSURL *)url
+                atPoint:(CGPoint)point;
 /**
  Tells the delegate that the user did select a link to an address.
  
