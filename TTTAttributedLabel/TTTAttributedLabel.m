@@ -821,6 +821,14 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
                 // Convert CT coordinates to line-relative coordinates
                 CGPoint relativePoint = CGPointMake(p.x - lineOrigin.x, p.y - lineOrigin.y);
                 idx = CTLineGetStringIndexForPosition(line, relativePoint);
+                
+                // CTLineGetStringIndexForPosition gets us near the answer we want, but not exactly. Its purpose is to determine where to place the insertion cursor when you click at a given point in the line. It will return the index of the character that should appear next after the cursor. But because the insertion cursor goes to the nearest gap between characters, if you're tapping on the right-half of character 4, it will return 5, because the cursor should go between 4 and 5.
+                // To solve this, we need to check the actual graphical offset of the index we've been given, and if it's beyond where we tapped, we should return the previous index.
+                
+                CGFloat startOfSuggestedCharacter = CTLineGetOffsetForStringIndex(line, idx, NULL);
+                if ( startOfSuggestedCharacter > relativePoint.x && idx > 0)
+                    idx--;
+                
                 break;
             }
         }
