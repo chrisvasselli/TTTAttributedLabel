@@ -1383,6 +1383,21 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
 
             self.attributedText = NSAttributedStringByScalingFontSize(self.attributedText, scaleFactor);
         }
+        
+        CGFloat textHeight = [self sizeThatFits:maxSize].height;
+        CGFloat availableHeight = self.frame.size.height;
+        if ( textHeight > availableHeight )
+        {
+            originalAttributedText = [self.attributedText copy];
+            
+            CGFloat scaleFactor = availableHeight / textHeight;
+            if ([self respondsToSelector:@selector(minimumScaleFactor)] && self.minimumScaleFactor > scaleFactor) {
+                scaleFactor = self.minimumScaleFactor;
+            }
+            
+            self.attributedText = NSAttributedStringByScalingFontSize(self.attributedText, scaleFactor);
+            
+        }
     }
 
     CGContextRef c = UIGraphicsGetCurrentContext();
