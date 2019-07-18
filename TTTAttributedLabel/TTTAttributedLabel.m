@@ -1388,7 +1388,8 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
         CGFloat availableHeight = self.frame.size.height;
         if ( textHeight > availableHeight )
         {
-            originalAttributedText = [self.attributedText copy];
+            if ( originalAttributedText == nil )
+                originalAttributedText = [self.attributedText copy];
             
             CGFloat scaleFactor = availableHeight / textHeight;
             if ([self respondsToSelector:@selector(minimumScaleFactor)] && self.minimumScaleFactor > scaleFactor) {
