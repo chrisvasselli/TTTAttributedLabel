@@ -259,7 +259,8 @@ static inline CGSize MemoizedCTFramesetterSuggestFrameSizeWithConstraints(	CTFra
                                                                     CFDictionaryRef __nullable frameAttributes,
                                                                     CGSize constraints,
                                                                     CFRange * __nullable fitRange,
-                                                                    NSAttributedString* attributedString)
+                                                                    NSAttributedString* attributedString,
+                                                                    CGFloat ss_heightOffset)
 {
     static NSMutableDictionary* memoizedResults;
     static dispatch_once_t onceToken;
@@ -296,6 +297,7 @@ static inline CGSize MemoizedCTFramesetterSuggestFrameSizeWithConstraints(	CTFra
     // No result found
     
     CGSize size = CTFramesetterSuggestFrameSizeWithConstraints(framesetter, stringRange, frameAttributes, constraints, fitRange);
+    size.height += ss_heightOffset;
     NSValue* sizeValue = [NSValue valueWithCGSize:size];
     [previouslyCalculatedSizes addObject:@[[NSValue valueWithCGSize:constraints], sizeValue]];
 
@@ -303,7 +305,7 @@ static inline CGSize MemoizedCTFramesetterSuggestFrameSizeWithConstraints(	CTFra
 }
 
 
-static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstraints(CTFramesetterRef framesetter, NSAttributedString *attributedString, CGSize size, NSUInteger numberOfLines, UIFont* labelFont) {
+static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstraints(CTFramesetterRef framesetter, NSAttributedString *attributedString, CGSize size, NSUInteger numberOfLines, UIFont* labelFont, CGFloat ss_heightOffset) {
     CFRange rangeToSize = CFRangeMake(0, (CFIndex)[attributedString length]);
     CGSize constraints = CGSizeMake(size.width, TTTFLOAT_MAX);
 
@@ -329,7 +331,7 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
         CGPathRelease(path);
     }
 
-    CGSize suggestedSize = MemoizedCTFramesetterSuggestFrameSizeWithConstraints(framesetter, rangeToSize, NULL, constraints, NULL, attributedString);
+    CGSize suggestedSize = MemoizedCTFramesetterSuggestFrameSizeWithConstraints(framesetter, rangeToSize, NULL, constraints, NULL, attributedString, ss_heightOffset);
 
     return CGSizeMake(CGFloat_ceil(suggestedSize.width), CGFloat_ceil(suggestedSize.height));
 }
@@ -463,25 +465,6 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
     if (_longPressGestureRecognizer) {
         [self removeGestureRecognizer:_longPressGestureRecognizer];
     }
-}
-
-#pragma mark -
-
-+ (CGSize)sizeThatFitsAttributedString:(NSAttributedString *)attributedString
-                       withConstraints:(CGSize)size
-                limitedToNumberOfLines:(NSUInteger)numberOfLines
-{
-    if (!attributedString || attributedString.length == 0) {
-        return CGSizeZero;
-    }
-
-    CTFramesetterRef framesetter = CTFramesetterCreateWithAttributedString((__bridge CFAttributedStringRef)attributedString);
-    
-    CGSize calculatedSize = CTFramesetterSuggestFrameSizeForAttributedStringWithConstraints(framesetter, attributedString, size, numberOfLines, nil);
-
-    CFRelease(framesetter);
-
-    return calculatedSize;
 }
 
 #pragma mark -
@@ -858,6 +841,25 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
     return [layoutManager boundingRectForGlyphRange:glyphRange inTextContainer:textContainer];
 }
 
+- (BOOL) attributedTextContainsUnderline
+{
+    __block BOOL found = NO;
+    [self.attributedText enumerateAttribute:kTTTStrikeOutAttributeName inRange:NSMakeRange(0, self.attributedText.length) options:0 usingBlock:^(id  _Nullable value, NSRange range, BOOL * _Nonnull stop) {
+        if ( value != nil )
+        {
+            found = YES;
+            *stop = YES;
+        }
+    }];
+
+    return found;
+}
+
+- (CGFloat) underlineOffset
+{
+    return [self attributedTextContainsUnderline] ? self.ss_textOffsetToStrikethroughUnderline : 0;
+}
+
 - (void)drawFramesetter:(CTFramesetterRef)framesetter
        attributedString:(NSAttributedString *)attributedString
               textRange:(CFRange)textRange
@@ -867,7 +869,7 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
     CGMutablePathRef path = CGPathCreateMutable();
     CGPathAddRect(path, NULL, rect);
     CTFrameRef frame = CTFramesetterCreateFrame(framesetter, textRange, path, NULL);
-
+    
     [self drawBackground:frame inRect:rect context:c];
 
     CFArrayRef lines = CTFrameGetLines(frame);
@@ -954,7 +956,7 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
                 }
 
                 CGFloat penOffset = (CGFloat)CTLineGetPenOffsetForFlush(truncatedLine, flushFactor, rect.size.width);
-                CGContextSetTextPosition(c, penOffset, lineOrigin.y - descent - self.font.descender + self.ss_textOffsetToStrikethroughUnderline);
+                CGContextSetTextPosition(c, penOffset, lineOrigin.y - descent - self.font.descender);
 
                 CTLineDraw(truncatedLine, c);
                 
@@ -971,14 +973,12 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
                 CFRelease(truncationToken);
             } else {
                 CGFloat penOffset = (CGFloat)CTLineGetPenOffsetForFlush(line, flushFactor, rect.size.width);
-                CGContextSetTextPosition(c, penOffset, lineOrigin.y - descent - self.font.descender + self.ss_textOffsetToStrikethroughUnderline);
+                CGContextSetTextPosition(c, penOffset, lineOrigin.y - descent - self.font.descender);
                 CTLineDraw(line, c);
             }
         } else {
             CGFloat penOffset = (CGFloat)CTLineGetPenOffsetForFlush(line, flushFactor, rect.size.width);
-            
-            // looks like I need to conditionally add 2 to this if romaji is not showing, and we're on ios 11. Don't totally understand why, it looks like "descent" is changing.
-            CGContextSetTextPosition(c, penOffset, lineOrigin.y - descent - self.font.descender + self.ss_textOffsetToStrikethroughUnderline);
+            CGContextSetTextPosition(c, penOffset, lineOrigin.y - descent - self.font.descender);
             CTLineDraw(line, c);
         }
     }
@@ -1068,6 +1068,8 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
     CGPoint origins[[lines count]];
     CTFrameGetLineOrigins(frame, CFRangeMake(0, 0), origins);
 
+    CGFloat underlineOffset = [self underlineOffset];
+    
     CFIndex lineIndex = 0;
     for (id line in lines) {
         CGFloat ascent = 0.0f, descent = 0.0f, leading = 0.0f;
@@ -1141,7 +1143,7 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
                     width--;
                 }
                 
-                CGFloat y = CGFloat_round(runBounds.origin.y);
+                CGFloat y = CGFloat_round(runBounds.origin.y) - underlineOffset;
                 CGContextMoveToPoint(c, x, y);
                 CGContextAddLineToPoint(c, x + width, y);
 
@@ -1320,7 +1322,7 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
     textRect.size.height = MAX(self.font.lineHeight * MAX(2, numberOfLines), bounds.size.height);
 
     // Adjust the text to be in the center vertically, if the text size is smaller than bounds
-    CGSize textSize = MemoizedCTFramesetterSuggestFrameSizeWithConstraints([self framesetter], CFRangeMake(0, (CFIndex)[self.attributedText length]), NULL, textRect.size, NULL, self.renderedAttributedText);
+    CGSize textSize = MemoizedCTFramesetterSuggestFrameSizeWithConstraints([self framesetter], CFRangeMake(0, (CFIndex)[self.attributedText length]), NULL, textRect.size, NULL, self.renderedAttributedText, [self underlineOffset]);
     textSize = CGSizeMake(CGFloat_ceil(textSize.width), CGFloat_ceil(textSize.height)); // Fix for iOS 4, CTFramesetterSuggestFrameSizeWithConstraints sometimes returns fractional sizes
 
     if (textSize.height < bounds.size.height) {
@@ -1530,7 +1532,7 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
         
         NSAttributedString *string = [[NSAttributedString alloc] initWithAttributedString:fullString];
         
-        CGSize labelSize = CTFramesetterSuggestFrameSizeForAttributedStringWithConstraints([self framesetter], string, size, (NSUInteger)self.numberOfLines, self.font);
+        CGSize labelSize = CTFramesetterSuggestFrameSizeForAttributedStringWithConstraints([self framesetter], string, size, (NSUInteger)self.numberOfLines, self.font, [self underlineOffset]);
         labelSize.width += self.textInsets.left + self.textInsets.right;
         labelSize.height += self.textInsets.top + self.textInsets.bottom;
 

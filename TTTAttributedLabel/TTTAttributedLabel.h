@@ -196,7 +196,7 @@ IB_DESIGNABLE
 @property (nonatomic, assign) IBInspectable CGFloat kern;
 
 /**
- * ADDED BY NIHONGO: Need this to fix a bug in iOS 11
+ * ADDED BY NIHONGO. We're using strikethrough attribute as our underline. This is the offset under the line where the underline appears.
  */
 @property (nonatomic, assign) CGFloat ss_textOffsetToStrikethroughUnderline;
 
@@ -260,23 +260,6 @@ IB_DESIGNABLE
  *  The long-press gesture recognizer used internally by the label.
  */
 @property (nonatomic, strong, readonly) UILongPressGestureRecognizer *longPressGestureRecognizer;
-
-///--------------------------------------------
-/// @name Calculating Size of Attributed String
-///--------------------------------------------
-
-/**
- Calculate and return the size that best fits an attributed string, given the specified constraints on size and number of lines.
-
- @param attributedString The attributed string.
- @param size The maximum dimensions used to calculate size.
- @param numberOfLines The maximum number of lines in the text to draw, if the constraining size cannot accomodate the full attributed string.
- 
- @return The size that fits the attributed string within the specified constraints.
- */
-+ (CGSize)sizeThatFitsAttributedString:(NSAttributedString *)attributedString
-                       withConstraints:(CGSize)size
-                limitedToNumberOfLines:(NSUInteger)numberOfLines;
 
 ///----------------------------------
 /// @name Setting the Text Attributes
