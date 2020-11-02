@@ -70,6 +70,17 @@ extern NSString * const kTTTBackgroundLineWidthAttributeName;
  */
 extern NSString * const kTTTBackgroundCornerRadiusAttributeName;
 
+/**
+  Adds a half-width ten-ten on top of this character, which will look like it's being applied to the previous character.
+ */
+extern NSString * const kSSHalfWidthTenTenAttributeName;
+
+/**
+ Adds a half-width maru on top of this character, which will look like it's being applied to the previous character
+ */
+extern NSString * const kSSHalfWidthPSoundAttributeName;
+
+
 @protocol TTTAttributedLabelDelegate;
 
 // Override UILabel @property to accept both NSString and NSAttributedString

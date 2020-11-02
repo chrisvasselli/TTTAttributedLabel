@@ -37,6 +37,10 @@ NSString * const kTTTBackgroundStrokeColorAttributeName = @"TTTBackgroundStrokeC
 NSString * const kTTTBackgroundLineWidthAttributeName = @"TTTBackgroundLineWidth";
 NSString * const kTTTBackgroundCornerRadiusAttributeName = @"TTTBackgroundCornerRadius";
 
+NSString * const kSSHalfWidthTenTenAttributeName = @"SSHalfWidthTenTenAttribute";
+NSString * const kSSHalfWidthPSoundAttributeName = @"SSHalfWidthPSoundAttribute";
+
+
 const NSTextAlignment TTTTextAlignmentLeft = NSTextAlignmentLeft;
 const NSTextAlignment TTTTextAlignmentCenter = NSTextAlignmentCenter;
 const NSTextAlignment TTTTextAlignmentRight = NSTextAlignmentRight;
@@ -984,6 +988,7 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
     }
 
     [self drawStrike:frame inRect:rect context:c];
+    [self drawNihongoAdditions:frame inRect:rect context:c];
 
     CFRelease(frame);
     CGPathRelease(path);
@@ -1059,6 +1064,75 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
         lineIndex++;
     }
 }
+
+- (void)drawNihongoAdditions:(CTFrameRef)frame
+            inRect:(__unused CGRect)rect
+           context:(CGContextRef)c
+{
+    NSArray *lines = (__bridge NSArray *)CTFrameGetLines(frame);
+    CGPoint origins[[lines count]];
+    CTFrameGetLineOrigins(frame, CFRangeMake(0, 0), origins);
+
+    CGFloat underlineOffset = [self underlineOffset];
+    
+    CFIndex lineIndex = 0;
+    for (id line in lines) {
+        CGFloat ascent = 0.0f, descent = 0.0f, leading = 0.0f;
+        CGFloat width = (CGFloat)CTLineGetTypographicBounds((__bridge CTLineRef)line, &ascent, &descent, &leading) ;
+
+        NSArray *glyphRuns = (__bridge NSArray *)CTLineGetGlyphRuns((__bridge CTLineRef)line);
+        for (id glyphRun in glyphRuns) {
+            NSDictionary *attributes = (__bridge NSDictionary *)CTRunGetAttributes((__bridge CTRunRef) glyphRun);
+            BOOL tenTen = [[attributes objectForKey:kSSHalfWidthTenTenAttributeName] boolValue];
+            BOOL pSound = [[attributes objectForKey:kSSHalfWidthPSoundAttributeName] boolValue];
+
+            if (tenTen || pSound) {
+                CGRect runBounds = CGRectZero;
+                CGFloat runAscent = 0.0f;
+                CGFloat runDescent = 0.0f;
+
+                runBounds.size.width = (CGFloat)CTRunGetTypographicBounds((__bridge CTRunRef)glyphRun, CFRangeMake(0, 0), &runAscent, &runDescent, NULL);
+                runBounds.size.height = runAscent + runDescent;
+
+                CGFloat xOffset = 0.0f;
+                CFRange glyphRange = CTRunGetStringRange((__bridge CTRunRef)glyphRun);
+                switch (CTRunGetStatus((__bridge CTRunRef)glyphRun)) {
+                    case kCTRunStatusRightToLeft:
+                        xOffset = CTLineGetOffsetForStringIndex((__bridge CTLineRef)line, glyphRange.location + glyphRange.length, NULL);
+                        break;
+                    default:
+                        xOffset = CTLineGetOffsetForStringIndex((__bridge CTLineRef)line, glyphRange.location, NULL);
+                        break;
+                }
+                runBounds.origin.x = origins[lineIndex].x + xOffset;
+                runBounds.origin.y = origins[lineIndex].y;
+                runBounds.origin.y -= runDescent;
+                
+                // Offset just to give these things a little more space from the small kana they're going to be drawn on top of.
+                runBounds.origin.y += 2;
+
+                // Use text color, or default to black
+                id color = [attributes objectForKey:(id)kCTForegroundColorAttributeName];
+                if (color == nil)
+                    color = [attributes objectForKey:(id)NSForegroundColorAttributeName];
+                if (color) {
+                    CGContextSetStrokeColorWithColor(c, CGColorRefFromColor(color));
+                } else {
+                    CGContextSetGrayStrokeColor(c, 0.0f, 1.0);
+                }
+                
+                NSString* character = tenTen ? @"ﾞ" : @"ﾟ";
+                NSAttributedString* attributedString = [[NSAttributedString alloc] initWithString:character attributes: attributes];
+                CTLineRef line = CTLineCreateWithAttributedString((__bridge CFAttributedStringRef) attributedString);
+                CGContextSetTextPosition(c, runBounds.origin.x, runBounds.origin.y);
+                CTLineDraw(line, c);
+            }
+        }
+
+        lineIndex++;
+    }
+}
+
 
 - (void)drawStrike:(CTFrameRef)frame
             inRect:(__unused CGRect)rect
