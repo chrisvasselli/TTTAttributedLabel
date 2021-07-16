@@ -831,18 +831,31 @@ static inline CGSize CTFramesetterSuggestFrameSizeForAttributedStringWithConstra
     NSMutableAttributedString *mutableAttributedString = [self.attributedText mutableCopy];
     [mutableAttributedString removeAttribute:NSParagraphStyleAttributeName range:NSMakeRange(0, mutableAttributedString.length)];
     
+    __block CGFloat rubySizeFactor = 1.0;
+    [mutableAttributedString enumerateAttributesInRange:NSMakeRange(0, self.attributedText.length) options:0 usingBlock:^(NSDictionary<NSAttributedStringKey,id> * _Nonnull attrs, NSRange range, BOOL * _Nonnull stop) {
+        if ( [attrs.allKeys containsObject:@"CTRubyAnnotation"] )
+        {
+            CTRubyAnnotationRef ruby = (__bridge CTRubyAnnotationRef)([attrs objectForKey:@"CTRubyAnnotation"]);
+            rubySizeFactor = CTRubyAnnotationGetSizeFactor(ruby);
+            stop = YES;
+        }
+    }];
+    
     NSTextStorage *textStorage = [[NSTextStorage alloc] initWithAttributedString:mutableAttributedString];
 
     NSLayoutManager *layoutManager = [[NSLayoutManager alloc] init];
     [textStorage addLayoutManager:layoutManager];
 
     NSTextContainer *textContainer = [[NSTextContainer alloc] initWithSize:self.bounds.size];
+    textContainer.lineFragmentPadding = 0.0;
     [layoutManager addTextContainer:textContainer];
 
     NSRange glyphRange;
     [layoutManager characterRangeForGlyphRange:range actualGlyphRange:&glyphRange];
 
-    return [layoutManager boundingRectForGlyphRange:glyphRange inTextContainer:textContainer];
+    CGRect rect = [layoutManager boundingRectForGlyphRange:glyphRange inTextContainer:textContainer];
+    rect.origin = CGPointMake(rect.origin.x, rect.origin.y * (1 + rubySizeFactor));
+    return rect;
 }
 
 - (BOOL) attributedTextContainsUnderline
