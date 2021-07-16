@@ -1721,10 +1721,9 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
 
         switch (result.resultType) {
             case NSTextCheckingTypeLink:
-                if ([self.delegate respondsToSelector:@selector(attributedLabel:didSelectLinkWithURL:atPoint:)]) {
-                    UITouch *touch = [touches anyObject];
-                    CGPoint touchPoint = [touch locationInView:self];
-                    [self.delegate attributedLabel:self didSelectLinkWithURL:result.URL atPoint:touchPoint];
+                if ([self.delegate respondsToSelector:@selector(attributedLabel:didSelectLinkWithURL:withRect:)]) {
+                    CGRect rect = [self boundingRectForCharacterRange: result.range];
+                    [self.delegate attributedLabel:self didSelectLinkWithURL:result.URL withRect:rect];
                     return;
                 }
                 break;

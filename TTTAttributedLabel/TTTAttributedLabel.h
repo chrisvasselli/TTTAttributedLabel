@@ -450,7 +450,7 @@ afterInheritingLabelAttributesAndConfiguringWithBlock:(NSMutableAttributedString
  */
 - (void)attributedLabel:(TTTAttributedLabel *)label
    didSelectLinkWithURL:(NSURL *)url
-                atPoint:(CGPoint)point;
+                withRect:(CGRect)rect;
 /**
  Tells the delegate that the user did select a link to an address.
  
